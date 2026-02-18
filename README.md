@@ -1,5 +1,7 @@
 # go-notify-server
 
+> WARNING: Beware that this project was entirely LLM-generated.
+
 A minimal, self-hosted Web Push notification server in Go.
 
 Handles VAPID key management, push subscription storage (SQLite), and notification delivery via the standard [Web Push protocol](https://www.rfc-editor.org/rfc/rfc8030) (RFC 8030 + VAPID RFC 8292). Designed to pair with any PWA that implements the browser Push API — no vendor lock-in, no external push service dependency beyond the browser-native ones (FCM, Mozilla Autopush, etc.).
