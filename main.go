@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -80,6 +81,11 @@ func main() {
 		Handler: srv.NewRouter(corsOrigin),
 	}
 
+	// Start automatic delivery log purge.
+	purgeCtx, purgeCancel := context.WithCancel(context.Background())
+	defer purgeCancel()
+	go purgeDeliveryLogLoop(purgeCtx, db)
+
 	// Start listening in a goroutine.
 	go func() {
 		log.Printf("listening on :%s", port)
@@ -94,6 +100,8 @@ func main() {
 	sig := <-quit
 	log.Printf("received %s, shutting down...", sig)
 
+	purgeCancel()
+
 	// Stop accepting new connections.
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -106,4 +114,32 @@ func main() {
 	srv.WG.Wait()
 
 	log.Println("shutdown complete")
+}
+
+// purgeDeliveryLogLoop purges delivery log entries older than 30 days,
+// once at startup and then every 24 hours.
+func purgeDeliveryLogLoop(ctx context.Context, db *sql.DB) {
+	const retention = 30 * 24 * time.Hour
+	const interval = 24 * time.Hour
+
+	purge := func() {
+		deleted, err := PurgeDeliveryLog(db, retention)
+		if err != nil {
+			log.Printf("delivery log purge error: %v", err)
+		} else if deleted > 0 {
+			log.Printf("purged %d delivery log entries older than 30d", deleted)
+		}
+	}
+
+	purge()
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			purge()
+		}
+	}
 }

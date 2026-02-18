@@ -331,7 +331,7 @@ ADMIN_KEY=your-secret-admin-key
 
 - **Set `CORS_ORIGIN`** to your app's actual origin (e.g. `https://myapp.example.com`). The default `*` is fine for development but too permissive for production.
 - **Back up the SQLite database** — the `/data/notify.db` file is the only state. A simple file copy while the server is running is safe (SQLite WAL mode).
-- **Delivery logs are not automatically purged.** They accumulate indefinitely. Periodically call `DELETE /delivery-log?older_than=30d` from a cron job or manually to reclaim space.
+- **Delivery logs** are automatically purged every 24 hours (entries older than 30 days are deleted). You can also trigger a manual purge via `DELETE /delivery-log?older_than=30d`.
 
 ## Development
 
