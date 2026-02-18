@@ -173,6 +173,51 @@ func TestHandlers(t *testing.T) {
 		}
 	})
 
+	// POST /topics/{topic}/notify — public topic notify
+	t.Run("TopicNotify", func(t *testing.T) {
+		// Subscribe to topic "test" (already created above, but create fresh one to be safe).
+		payload := `{"topic":"topictest","subscription":{"endpoint":"https://push.example.com/topictest","keys":{"p256dh":"dGVzdA","auth":"dGVzdA"}}}`
+		resp, err := client.Post(ts.URL+"/subscriptions", "application/json", strings.NewReader(payload))
+		if err != nil {
+			t.Fatalf("POST /subscriptions: %v", err)
+		}
+		resp.Body.Close()
+
+		// Send notification via public topic endpoint.
+		notifyPayload := `{"title":"Hello topic"}`
+		resp, err = client.Post(ts.URL+"/topics/topictest/notify", "application/json", strings.NewReader(notifyPayload))
+		if err != nil {
+			t.Fatalf("POST /topics/topictest/notify: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("expected 200, got %d", resp.StatusCode)
+		}
+		var result struct {
+			Sent         int `json:"sent"`
+			Failed       int `json:"failed"`
+			StaleRemoved int `json:"stale_removed"`
+		}
+		json.NewDecoder(resp.Body).Decode(&result)
+		// The push will fail (fake endpoint) but we should get a valid response structure.
+		if result.Sent+result.Failed+result.StaleRemoved < 1 {
+			t.Errorf("expected at least 1 delivery attempt, got sent=%d failed=%d stale_removed=%d", result.Sent, result.Failed, result.StaleRemoved)
+		}
+	})
+
+	// POST /topics//notify — missing topic returns 404 (no route match)
+	t.Run("TopicNotifyNoTopic", func(t *testing.T) {
+		resp, err := client.Post(ts.URL+"/topics//notify", "application/json", strings.NewReader(`{"title":"x"}`))
+		if err != nil {
+			t.Fatalf("POST /topics//notify: %v", err)
+		}
+		defer resp.Body.Close()
+		// Go's ServeMux won't match an empty {topic} segment, so 404.
+		if resp.StatusCode != http.StatusNotFound {
+			t.Fatalf("expected 404, got %d", resp.StatusCode)
+		}
+	})
+
 	// DELETE /subscriptions — remove by endpoint
 	t.Run("DeleteSubscription", func(t *testing.T) {
 		payload := `{"endpoint":"https://push.example.com/test"}`
@@ -199,8 +244,11 @@ func TestHandlers(t *testing.T) {
 			Subscriptions []Subscription `json:"subscriptions"`
 		}
 		json.NewDecoder(resp2.Body).Decode(&body)
-		if len(body.Subscriptions) != 0 {
-			t.Errorf("expected 0 subscriptions after delete, got %d", len(body.Subscriptions))
+		// The "topictest" subscription from TopicNotify test still exists.
+		for _, sub := range body.Subscriptions {
+			if sub.Endpoint == "https://push.example.com/test" {
+				t.Error("expected deleted subscription to be gone")
+			}
 		}
 	})
 }

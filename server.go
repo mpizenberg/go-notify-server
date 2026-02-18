@@ -16,6 +16,7 @@ func (s *Server) NewRouter(corsOrigin string) http.Handler {
 	mux.HandleFunc("GET /vapid-public-key", s.HandleGetVAPIDPublicKey)
 	mux.HandleFunc("POST /subscriptions", s.HandlePostSubscription)
 	mux.HandleFunc("DELETE /subscriptions", s.HandleDeleteSubscriptionByEndpoint)
+	mux.HandleFunc("POST /topics/{topic}/notify", s.HandleTopicNotify)
 
 	// Admin endpoints
 	mux.HandleFunc("GET /subscriptions", s.requireAuth(s.HandleListSubscriptions))

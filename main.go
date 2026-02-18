@@ -32,6 +32,7 @@ func main() {
 	dbPath := os.Getenv("DB_PATH")
 	port := os.Getenv("PORT")
 	corsOrigin := os.Getenv("CORS_ORIGIN")
+	welcomeMessage := os.Getenv("WELCOME_MESSAGE")
 
 	// Defaults.
 	if dbPath == "" {
@@ -74,6 +75,7 @@ func main() {
 		VAPIDPrivateKey: vapidPrivateKey,
 		VAPIDContact:    vapidContact,
 		AdminKey:        adminKey,
+		WelcomeMessage:  welcomeMessage,
 	}
 
 	httpServer := &http.Server{

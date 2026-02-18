@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -55,15 +54,12 @@ func pushPayload(req NotifyRequest) ([]byte, error) {
 
 const pushConcurrency = 10
 
-// SendNotifications fans out push delivery to all matching subscriptions.
+// SendNotifications fetches subscriptions by topic and delivers to all of them.
 // It uses context.Background() so delivery survives HTTP request cancellation.
 // The provided wg is incremented/decremented for graceful shutdown tracking.
 func SendNotifications(db *sql.DB, req NotifyRequest, vapidPublicKey, vapidPrivateKey, vapidContact string, wg *sync.WaitGroup) NotifyResult {
 	wg.Add(1)
 	defer wg.Done()
-
-	ctx := context.Background()
-	_ = ctx // delivery is fire-and-forget, no request-scoped cancellation
 
 	subs, err := GetSubscriptionsByTopic(db, req.Topic)
 	if err != nil {
@@ -71,6 +67,11 @@ func SendNotifications(db *sql.DB, req NotifyRequest, vapidPublicKey, vapidPriva
 		return NotifyResult{}
 	}
 
+	return sendToSubscriptions(db, subs, req, vapidPublicKey, vapidPrivateKey, vapidContact)
+}
+
+// sendToSubscriptions fans out push delivery to the given subscriptions.
+func sendToSubscriptions(db *sql.DB, subs []Subscription, req NotifyRequest, vapidPublicKey, vapidPrivateKey, vapidContact string) NotifyResult {
 	payload, err := pushPayload(req)
 	if err != nil {
 		log.Printf("error building push payload: %v", err)

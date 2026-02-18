@@ -69,15 +69,16 @@ export ADMIN_KEY=your-secret-admin-key
 
 All via environment variables (12-factor style):
 
-| Variable            | Required | Default            | Description                               |
-| ------------------- | -------- | ------------------ | ----------------------------------------- |
-| `VAPID_PUBLIC_KEY`  | yes      | —                  | Base64url-encoded ECDSA P-256 public key  |
-| `VAPID_PRIVATE_KEY` | yes      | —                  | Base64url-encoded ECDSA P-256 private key |
-| `VAPID_CONTACT`     | yes      | —                  | `mailto:` URI identifying the operator    |
-| `ADMIN_KEY`         | yes      | —                  | Bearer token for admin endpoints          |
-| `DB_PATH`           | no       | `./data/notify.db` | Path to the SQLite database file          |
-| `PORT`              | no       | `8080`             | HTTP listen port                          |
-| `CORS_ORIGIN`       | no       | `*`                | `Access-Control-Allow-Origin` value       |
+| Variable            | Required | Default            | Description                                             |
+| ------------------- | -------- | ------------------ | ------------------------------------------------------- |
+| `VAPID_PUBLIC_KEY`  | yes      | —                  | Base64url-encoded ECDSA P-256 public key                |
+| `VAPID_PRIVATE_KEY` | yes      | —                  | Base64url-encoded ECDSA P-256 private key               |
+| `VAPID_CONTACT`     | yes      | —                  | `mailto:` URI identifying the operator                  |
+| `ADMIN_KEY`         | yes      | —                  | Bearer token for admin endpoints                        |
+| `DB_PATH`           | no       | `./data/notify.db` | Path to the SQLite database file                        |
+| `PORT`              | no       | `8080`             | HTTP listen port                                        |
+| `CORS_ORIGIN`       | no       | `*`                | `Access-Control-Allow-Origin` value                     |
+| `WELCOME_MESSAGE`   | no       | —                  | Push title sent on new subscription (disabled if empty) |
 
 ## API
 
@@ -124,6 +125,28 @@ Unregister a subscription by endpoint:
 ```
 
 Returns `204 No Content`. Idempotent (returns 204 even if not found).
+
+#### `POST /topics/{topic}/notify`
+
+Send a push notification to all subscribers of a topic — **no authentication required**. The topic name acts as a capability token: knowing the topic grants permission to notify its subscribers. This enables static web apps (no backend) to trigger notifications directly.
+
+```json
+{
+  "title": "New message",
+  "body": "Hello from a static site",
+  "icon": "/icons/icon-192.png",
+  "url": "/messages/123"
+}
+```
+
+- `title` is required. All other fields (`body`, `icon`, `badge`, `tag`, `url`) are optional.
+- The `topic` in the URL path overrides any `topic` in the body.
+
+Response:
+
+```json
+{ "sent": 5, "failed": 0, "stale_removed": 0 }
+```
 
 ### Admin endpoints
 

@@ -19,6 +19,7 @@ type Server struct {
 	VAPIDPrivateKey string
 	VAPIDContact    string
 	AdminKey        string
+	WelcomeMessage  string
 	WG              sync.WaitGroup
 }
 
@@ -71,6 +72,21 @@ func (s *Server) HandlePostSubscription(w http.ResponseWriter, r *http.Request) 
 		status = http.StatusCreated
 	}
 	writeJSON(w, status, map[string]string{"id": id})
+
+	if created && s.WelcomeMessage != "" {
+		sub := Subscription{
+			ID:        id,
+			Endpoint:  body.Subscription.Endpoint,
+			KeyP256dh: body.Subscription.Keys.P256dh,
+			KeyAuth:   body.Subscription.Keys.Auth,
+		}
+		s.WG.Add(1)
+		go func() {
+			defer s.WG.Done()
+			time.Sleep(1 * time.Second)
+			sendToSubscriptions(s.DB, []Subscription{sub}, NotifyRequest{Title: s.WelcomeMessage}, s.VAPIDPublicKey, s.VAPIDPrivateKey, s.VAPIDContact)
+		}()
+	}
 }
 
 // HandleDeleteSubscriptionByEndpoint removes a subscription by endpoint (public).
@@ -140,6 +156,31 @@ func (s *Server) HandleNotify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	result := SendNotifications(s.DB, req, s.VAPIDPublicKey, s.VAPIDPrivateKey, s.VAPIDContact, &s.WG)
+	writeJSON(w, http.StatusOK, result)
+}
+
+// HandleTopicNotify sends push notifications to a topic's subscribers (public).
+// The topic name acts as a capability token — knowing the topic grants permission to notify it.
+func (s *Server) HandleTopicNotify(w http.ResponseWriter, r *http.Request) {
+	topic := r.PathValue("topic")
+	if topic == "" {
+		writeError(w, http.StatusBadRequest, "topic is required")
+		return
+	}
+
+	var req NotifyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	if req.Title == "" {
+		writeError(w, http.StatusBadRequest, "title is required")
+		return
+	}
+
+	req.Topic = topic
 	result := SendNotifications(s.DB, req, s.VAPIDPublicKey, s.VAPIDPrivateKey, s.VAPIDContact, &s.WG)
 	writeJSON(w, http.StatusOK, result)
 }
