@@ -127,7 +127,7 @@ Returns `204 No Content`. Idempotent (returns 204 even if not found).
 
 ### Admin endpoints
 
-Require `Authorization: Bearer <ADMIN_KEY>`. Return `401` if missing or invalid.
+The `ADMIN_KEY` is a shared secret that protects admin endpoints — it's used by your backend or scripts when sending notifications or managing subscriptions. Generate one with `openssl rand -base64 32` and pass it in the `Authorization: Bearer <ADMIN_KEY>` header. Returns `401` if missing or invalid.
 
 #### `POST /notify`
 
