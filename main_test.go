@@ -190,7 +190,10 @@ func TestHandlers(t *testing.T) {
 		// Verify it's gone.
 		req2, _ := http.NewRequest("GET", ts.URL+"/subscriptions", nil)
 		req2.Header.Set("Authorization", "Bearer test-admin-key")
-		resp2, _ := client.Do(req2)
+		resp2, err := client.Do(req2)
+		if err != nil {
+			t.Fatalf("GET /subscriptions (verify delete): %v", err)
+		}
 		defer resp2.Body.Close()
 		var body struct {
 			Subscriptions []Subscription `json:"subscriptions"`
