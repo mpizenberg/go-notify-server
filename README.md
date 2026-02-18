@@ -235,6 +235,104 @@ ENTRYPOINT ["go-notify-server"]
 
 Container images are published to `ghcr.io/mpizenberg/go-notify-server` on version tags.
 
+## Deployment
+
+Web Push **requires HTTPS** — browsers refuse `pushManager.subscribe()` on insecure origins. The server itself listens on plain HTTP (port 8080); use a reverse proxy for TLS termination.
+
+### Docker Compose
+
+A typical setup with Caddy as the reverse proxy handling automatic HTTPS:
+
+```yaml
+services:
+  notify:
+    image: ghcr.io/mpizenberg/go-notify-server
+    restart: unless-stopped
+    volumes:
+      - notify-data:/data
+    environment:
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_CONTACT: ${VAPID_CONTACT}
+      ADMIN_KEY: ${ADMIN_KEY}
+      CORS_ORIGIN: https://myapp.example.com
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - ./Caddyfile:/etc/caddy/Caddyfile
+
+volumes:
+  notify-data:
+  caddy-data:
+```
+
+With a `Caddyfile`:
+
+```
+push.example.com {
+    reverse_proxy notify:8080
+}
+```
+
+Put the secrets in a `.env` file next to the compose file:
+
+```sh
+VAPID_PUBLIC_KEY=BLkzGx5k3Rq...
+VAPID_PRIVATE_KEY=dGhpcyBpcyB...
+VAPID_CONTACT=mailto:admin@example.com
+ADMIN_KEY=your-secret-admin-key
+```
+
+### Dokploy
+
+[Dokploy](https://dokploy.com) manages Docker Compose deployments with Traefik handling TLS via Let's Encrypt.
+
+1. **Create a Compose project** — In your Dokploy dashboard, create a new **Compose** project. Paste the following as the compose file:
+
+   ```yaml
+   services:
+     notify:
+       image: ghcr.io/mpizenberg/go-notify-server
+       restart: unless-stopped
+       volumes:
+         - notify-data:/data
+       environment:
+         VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+         VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+         VAPID_CONTACT: ${VAPID_CONTACT}
+         ADMIN_KEY: ${ADMIN_KEY}
+         CORS_ORIGIN: ${CORS_ORIGIN}
+
+   volumes:
+     notify-data:
+   ```
+
+2. **Environment variables** — In the "Environment" tab, add:
+
+   ```
+   VAPID_PUBLIC_KEY=BLkzGx5k3Rq...
+   VAPID_PRIVATE_KEY=dGhpcyBpcyB...
+   VAPID_CONTACT=mailto:admin@example.com
+   ADMIN_KEY=your-secret-admin-key
+   CORS_ORIGIN=https://myapp.example.com
+   ```
+
+3. **Domain** — In the "Domains" tab, add your domain (e.g. `push.example.com`) pointed at the `notify` service on port 8080. Dokploy configures Traefik to route traffic and provision a Let's Encrypt certificate automatically.
+
+4. **Deploy** — Hit deploy. Traefik proxies HTTPS traffic to the container on port 8080, and the `notify-data` volume persists the SQLite database across redeployments.
+
+### Production notes
+
+- **Set `CORS_ORIGIN`** to your app's actual origin (e.g. `https://myapp.example.com`). The default `*` is fine for development but too permissive for production.
+- **Back up the SQLite database** — the `/data/notify.db` file is the only state. A simple file copy while the server is running is safe (SQLite WAL mode).
+- **Delivery logs are not automatically purged.** They accumulate indefinitely. Periodically call `DELETE /delivery-log?older_than=30d` from a cron job or manually to reclaim space.
+
 ## Development
 
 ### Build and test
