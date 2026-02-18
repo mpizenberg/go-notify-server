@@ -300,6 +300,8 @@ ADMIN_KEY=your-secret-admin-key
      notify:
        image: ghcr.io/mpizenberg/go-notify-server
        restart: unless-stopped
+       expose:
+         - 8080
        volumes:
          - notify-data:/data
        environment:
