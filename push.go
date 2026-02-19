@@ -29,25 +29,33 @@ type NotifyResult struct {
 	StaleRemoved int `json:"stale_removed"`
 }
 
-// pushPayload builds the JSON payload sent to the browser's service worker.
+// pushPayload builds the JSON payload sent to the browser.
+// It uses the Declarative Web Push format (RFC 8030) so that Safari 18.4+
+// can display the notification natively without waking the service worker.
+// Other browsers ignore the "web_push" key; the service worker unwraps
+// payload.notification to extract the fields.
 func pushPayload(req NotifyRequest) ([]byte, error) {
-	payload := map[string]any{
+	notification := map[string]any{
 		"title": req.Title,
 	}
 	if req.Body != "" {
-		payload["body"] = req.Body
+		notification["body"] = req.Body
 	}
 	if req.Icon != "" {
-		payload["icon"] = req.Icon
+		notification["icon"] = req.Icon
 	}
 	if req.Badge != "" {
-		payload["badge"] = req.Badge
+		notification["badge"] = req.Badge
 	}
 	if req.Tag != "" {
-		payload["tag"] = req.Tag
+		notification["tag"] = req.Tag
 	}
 	if req.URL != "" {
-		payload["data"] = map[string]string{"url": req.URL}
+		notification["data"] = map[string]any{"url": req.URL}
+	}
+	payload := map[string]any{
+		"web_push":     8030,
+		"notification": notification,
 	}
 	return json.Marshal(payload)
 }

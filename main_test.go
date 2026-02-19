@@ -76,6 +76,74 @@ func TestUpsertSubscription(t *testing.T) {
 	}
 }
 
+func TestPushPayload(t *testing.T) {
+	t.Run("TitleOnly", func(t *testing.T) {
+		data, err := pushPayload(NotifyRequest{Title: "Hello"})
+		if err != nil {
+			t.Fatalf("pushPayload: %v", err)
+		}
+		var got map[string]any
+		json.Unmarshal(data, &got)
+
+		if got["web_push"] != float64(8030) {
+			t.Errorf("expected web_push=8030, got %v", got["web_push"])
+		}
+		notif, ok := got["notification"].(map[string]any)
+		if !ok {
+			t.Fatal("expected notification object")
+		}
+		if notif["title"] != "Hello" {
+			t.Errorf("expected title=Hello, got %v", notif["title"])
+		}
+		// Optional fields should be absent.
+		for _, key := range []string{"body", "icon", "badge", "tag", "data"} {
+			if _, exists := notif[key]; exists {
+				t.Errorf("expected %q to be absent, but it was present", key)
+			}
+		}
+	})
+
+	t.Run("AllFields", func(t *testing.T) {
+		data, err := pushPayload(NotifyRequest{
+			Title: "Title",
+			Body:  "Body",
+			Icon:  "/icon.png",
+			Badge: "/badge.png",
+			Tag:   "msg-1",
+			URL:   "/page",
+		})
+		if err != nil {
+			t.Fatalf("pushPayload: %v", err)
+		}
+		var got map[string]any
+		json.Unmarshal(data, &got)
+
+		if got["web_push"] != float64(8030) {
+			t.Errorf("expected web_push=8030, got %v", got["web_push"])
+		}
+		notif := got["notification"].(map[string]any)
+		if notif["title"] != "Title" {
+			t.Errorf("title: got %v", notif["title"])
+		}
+		if notif["body"] != "Body" {
+			t.Errorf("body: got %v", notif["body"])
+		}
+		if notif["icon"] != "/icon.png" {
+			t.Errorf("icon: got %v", notif["icon"])
+		}
+		if notif["badge"] != "/badge.png" {
+			t.Errorf("badge: got %v", notif["badge"])
+		}
+		if notif["tag"] != "msg-1" {
+			t.Errorf("tag: got %v", notif["tag"])
+		}
+		dataObj := notif["data"].(map[string]any)
+		if dataObj["url"] != "/page" {
+			t.Errorf("data.url: got %v", dataObj["url"])
+		}
+	})
+}
+
 func newTestServer(t *testing.T) *Server {
 	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "test.db")

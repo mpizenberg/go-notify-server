@@ -15,6 +15,7 @@ There is no off-the-shelf, lightweight, self-hosted server that implements RFC 8
 - Single static binary, no runtime dependencies
 - Embedded SQLite storage (pure Go, no CGO)
 - Per-topic subscriptions (not just broadcast)
+- Declarative Web Push payload (Safari 18.4+ displays natively without service worker)
 - Automatic stale subscription cleanup (deletes on 404/410 from push services)
 - Delivery logging with configurable log purge
 - Simple bearer-token auth for admin endpoints
@@ -172,7 +173,8 @@ Send a push notification to matching subscriptions:
 
 - `title` is required. All other fields are optional.
 - If `topic` is set, only matching subscriptions are notified. If omitted, all subscriptions are notified.
-- `url` is nested under `data.url` in the push payload sent to browsers.
+- `url` is nested under `notification.data.url` in the push payload sent to browsers.
+- The server wraps the payload in the [Declarative Web Push](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers) format (`"web_push": 8030` envelope), so Safari 18.4+ can display notifications natively without waking the service worker. Other browsers ignore this key; their service worker unwraps `payload.notification`.
 - Delivery fans out concurrently (pool of 10). Stale subscriptions (404/410) are automatically removed.
 - TTL: 24 hours for all messages.
 
