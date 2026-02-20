@@ -50,7 +50,7 @@ docker run -d \
   -v notify-data:/data \
   -e VAPID_PUBLIC_KEY=... \
   -e VAPID_PRIVATE_KEY=... \
-  -e VAPID_CONTACT=mailto:admin@example.com \
+  -e VAPID_CONTACT=admin@example.com \
   -e ADMIN_KEY=your-secret-admin-key \
   ghcr.io/mpizenberg/go-notify-server
 ```
@@ -62,7 +62,7 @@ go build -o go-notify-server .
 
 export VAPID_PUBLIC_KEY=...
 export VAPID_PRIVATE_KEY=...
-export VAPID_CONTACT=mailto:admin@example.com
+export VAPID_CONTACT=admin@example.com
 export ADMIN_KEY=your-secret-admin-key
 
 ./go-notify-server
@@ -76,7 +76,7 @@ All via environment variables (12-factor style):
 | ------------------- | -------- | ------------------ | ------------------------------------------------------- |
 | `VAPID_PUBLIC_KEY`  | yes      | —                  | Base64url-encoded ECDSA P-256 public key                |
 | `VAPID_PRIVATE_KEY` | yes      | —                  | Base64url-encoded ECDSA P-256 private key               |
-| `VAPID_CONTACT`     | yes      | —                  | `mailto:` URI identifying the operator                  |
+| `VAPID_CONTACT`     | yes      | —                  | Contact email (`webpush-go` adds the `mailto:` prefix)  |
 | `ADMIN_KEY`         | yes      | —                  | Bearer token for admin endpoints                        |
 | `DB_PATH`           | no       | `./data/notify.db` | Path to the SQLite database file                        |
 | `PORT`              | no       | `8080`             | HTTP listen port                                        |
@@ -312,7 +312,7 @@ Put the secrets in a `.env` file next to the compose file:
 ```sh
 VAPID_PUBLIC_KEY=BLkzGx5k3Rq...
 VAPID_PRIVATE_KEY=dGhpcyBpcyB...
-VAPID_CONTACT=mailto:admin@example.com
+VAPID_CONTACT=admin@example.com
 ADMIN_KEY=your-secret-admin-key
 ```
 
@@ -347,7 +347,7 @@ ADMIN_KEY=your-secret-admin-key
    ```
    VAPID_PUBLIC_KEY=BLkzGx5k3Rq...
    VAPID_PRIVATE_KEY=dGhpcyBpcyB...
-   VAPID_CONTACT=mailto:admin@example.com
+   VAPID_CONTACT=admin@example.com
    ADMIN_KEY=your-secret-admin-key
    CORS_ORIGIN=https://myapp.example.com
    ```

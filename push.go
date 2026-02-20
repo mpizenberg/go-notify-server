@@ -112,6 +112,7 @@ func sendToSubscriptions(db *sql.DB, subs []Subscription, req NotifyRequest, vap
 				VAPIDPrivateKey: vapidPrivateKey,
 				Subscriber:      vapidContact,
 				TTL:             86400,
+				Urgency:         webpush.UrgencyHigh,
 			})
 
 			var statusCode int
