@@ -142,7 +142,7 @@ Send a push notification to all subscribers of a topic — **no authentication r
 }
 ```
 
-- `title` is required. All other fields (`body`, `icon`, `badge`, `tag`, `data.url`) are optional.
+- `title` is required. All other fields (`body`, `icon`, `badge`, `tag`, `lang`, `silent`, `data.url`) are optional.
 - The `topic` in the URL path overrides any `topic` in the body.
 - Refer to the `/notify` endpoint for more information.
 
@@ -177,6 +177,8 @@ Send a push notification to matching subscriptions:
 - `icon` — main image displayed alongside the notification (typically 192x192px). Can be an absolute path (resolved relative to the service worker's origin, e.g. `/icons/icon-192.png`) or a full URL (e.g. `https://cdn.example.com/icon.png`).
 - `badge` — small monochrome icon shown when space is limited, e.g. the Android status bar (typically 72x72px). Not supported on all platforms. Same path resolution as `icon`.
 - `tag` — string identifier that groups notifications. A new notification with the same tag **replaces** the previous one instead of stacking, useful for updating rather than flooding.
+- `lang` — BCP 47 language tag (e.g. `"en"`, `"fr-FR"`). Hints the language of the notification content to the browser.
+- `silent` — if `true`, the notification is presented silently (no sound/vibration). If omitted (`null`), the device default behavior applies.
 - `data.url` — URL to open when the notification is clicked. Passed through as `notification.data.url` in the push payload; the service worker reads it in its `notificationclick` handler.
 - The server wraps the payload in the [Declarative Web Push](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers) format (`"web_push": 8030` envelope), so Safari 18.4+ can display notifications natively without waking the service worker. Other browsers ignore this key; their service worker unwraps `payload.notification`.
 - Delivery fans out concurrently (pool of 10). Stale subscriptions (404/410) are automatically removed.

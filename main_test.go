@@ -96,7 +96,7 @@ func TestPushPayload(t *testing.T) {
 			t.Errorf("expected title=Hello, got %v", notif["title"])
 		}
 		// Optional fields should be absent.
-		for _, key := range []string{"body", "icon", "badge", "tag", "data"} {
+		for _, key := range []string{"body", "icon", "badge", "tag", "lang", "silent", "data"} {
 			if _, exists := notif[key]; exists {
 				t.Errorf("expected %q to be absent, but it was present", key)
 			}
@@ -104,13 +104,16 @@ func TestPushPayload(t *testing.T) {
 	})
 
 	t.Run("AllFields", func(t *testing.T) {
+		silent := true
 		data, err := pushPayload(NotifyRequest{
-			Title: "Title",
-			Body:  "Body",
-			Icon:  "/icon.png",
-			Badge: "/badge.png",
-			Tag:   "msg-1",
-			Data:  &NotifyRequestData{URL: "/page"},
+			Title:  "Title",
+			Body:   "Body",
+			Icon:   "/icon.png",
+			Badge:  "/badge.png",
+			Tag:    "msg-1",
+			Lang:   "en",
+			Silent: &silent,
+			Data:   &NotifyRequestData{URL: "/page"},
 		})
 		if err != nil {
 			t.Fatalf("pushPayload: %v", err)
@@ -136,6 +139,12 @@ func TestPushPayload(t *testing.T) {
 		}
 		if notif["tag"] != "msg-1" {
 			t.Errorf("tag: got %v", notif["tag"])
+		}
+		if notif["lang"] != "en" {
+			t.Errorf("lang: got %v", notif["lang"])
+		}
+		if notif["silent"] != true {
+			t.Errorf("silent: got %v", notif["silent"])
 		}
 		dataObj := notif["data"].(map[string]any)
 		if dataObj["url"] != "/page" {

@@ -23,8 +23,10 @@ type NotifyRequest struct {
 	Body  string             `json:"body"`
 	Icon  string             `json:"icon,omitempty"`
 	Badge string             `json:"badge,omitempty"`
-	Tag   string             `json:"tag,omitempty"`
-	Data  *NotifyRequestData `json:"data,omitempty"`
+	Tag    string             `json:"tag,omitempty"`
+	Lang   string             `json:"lang,omitempty"`
+	Silent *bool              `json:"silent,omitempty"`
+	Data   *NotifyRequestData `json:"data,omitempty"`
 }
 
 // NotifyResult is the JSON response for POST /notify.
@@ -54,6 +56,12 @@ func pushPayload(req NotifyRequest) ([]byte, error) {
 	}
 	if req.Tag != "" {
 		notification["tag"] = req.Tag
+	}
+	if req.Lang != "" {
+		notification["lang"] = req.Lang
+	}
+	if req.Silent != nil {
+		notification["silent"] = *req.Silent
 	}
 	if req.Data != nil && req.Data.URL != "" {
 		notification["data"] = map[string]any{"url": req.Data.URL}
