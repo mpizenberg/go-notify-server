@@ -138,12 +138,13 @@ Send a push notification to all subscribers of a topic — **no authentication r
   "title": "New message",
   "body": "Hello from a static site",
   "icon": "/icons/icon-192.png",
-  "url": "/messages/123"
+  "data": { "url": "/messages/123" }
 }
 ```
 
-- `title` is required. All other fields (`body`, `icon`, `badge`, `tag`, `url`) are optional.
+- `title` is required. All other fields (`body`, `icon`, `badge`, `tag`, `data.url`) are optional.
 - The `topic` in the URL path overrides any `topic` in the body.
+- Refer to the `/notify` endpoint for more information.
 
 Response:
 
@@ -167,13 +168,16 @@ Send a push notification to matching subscriptions:
   "icon": "/icons/icon-192.png",
   "badge": "/icons/badge-72.png",
   "tag": "message-123",
-  "url": "/messages/123"
+  "data": { "url": "/messages/123" }
 }
 ```
 
-- `title` is required. All other fields are optional.
+- `title` is required. All other fields are optional. The `url` field is nested under `data` to match the Notification API structure (see field descriptions below).
 - If `topic` is set, only matching subscriptions are notified. If omitted, all subscriptions are notified.
-- `url` is nested under `notification.data.url` in the push payload sent to browsers.
+- `icon` — main image displayed alongside the notification (typically 192x192px). Can be an absolute path (resolved relative to the service worker's origin, e.g. `/icons/icon-192.png`) or a full URL (e.g. `https://cdn.example.com/icon.png`).
+- `badge` — small monochrome icon shown when space is limited, e.g. the Android status bar (typically 72x72px). Not supported on all platforms. Same path resolution as `icon`.
+- `tag` — string identifier that groups notifications. A new notification with the same tag **replaces** the previous one instead of stacking, useful for updating rather than flooding.
+- `data.url` — URL to open when the notification is clicked. Passed through as `notification.data.url` in the push payload; the service worker reads it in its `notificationclick` handler.
 - The server wraps the payload in the [Declarative Web Push](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers) format (`"web_push": 8030` envelope), so Safari 18.4+ can display notifications natively without waking the service worker. Other browsers ignore this key; their service worker unwraps `payload.notification`.
 - Delivery fans out concurrently (pool of 10). Stale subscriptions (404/410) are automatically removed.
 - TTL: 24 hours for all messages.
@@ -417,7 +421,7 @@ GitHub Actions runs on every push and PR:
 curl -X POST http://localhost:8080/notify \
   -H "Authorization: Bearer your-admin-key" \
   -H "Content-Type: application/json" \
-  -d '{"title": "Test", "body": "Hello from go-notify-server"}'
+  -d '{"title": "Test", "body": "Hello from go-notify-server", "data": {"url": "/"}}'
 ```
 
 ### Listing subscriptions

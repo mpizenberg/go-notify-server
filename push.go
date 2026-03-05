@@ -11,15 +11,20 @@ import (
 	webpush "github.com/SherClockHolmes/webpush-go"
 )
 
+// NotifyRequestData holds the data sub-object of a notify request.
+type NotifyRequestData struct {
+	URL string `json:"url,omitempty"`
+}
+
 // NotifyRequest is the JSON body for POST /notify.
 type NotifyRequest struct {
-	Topic string `json:"topic"`
-	Title string `json:"title"`
-	Body  string `json:"body"`
-	Icon  string `json:"icon,omitempty"`
-	Badge string `json:"badge,omitempty"`
-	Tag   string `json:"tag,omitempty"`
-	URL   string `json:"url,omitempty"`
+	Topic string             `json:"topic"`
+	Title string             `json:"title"`
+	Body  string             `json:"body"`
+	Icon  string             `json:"icon,omitempty"`
+	Badge string             `json:"badge,omitempty"`
+	Tag   string             `json:"tag,omitempty"`
+	Data  *NotifyRequestData `json:"data,omitempty"`
 }
 
 // NotifyResult is the JSON response for POST /notify.
@@ -50,8 +55,8 @@ func pushPayload(req NotifyRequest) ([]byte, error) {
 	if req.Tag != "" {
 		notification["tag"] = req.Tag
 	}
-	if req.URL != "" {
-		notification["data"] = map[string]any{"url": req.URL}
+	if req.Data != nil && req.Data.URL != "" {
+		notification["data"] = map[string]any{"url": req.Data.URL}
 	}
 	payload := map[string]any{
 		"web_push":     8030,

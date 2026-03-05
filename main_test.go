@@ -110,7 +110,7 @@ func TestPushPayload(t *testing.T) {
 			Icon:  "/icon.png",
 			Badge: "/badge.png",
 			Tag:   "msg-1",
-			URL:   "/page",
+			Data:  &NotifyRequestData{URL: "/page"},
 		})
 		if err != nil {
 			t.Fatalf("pushPayload: %v", err)
