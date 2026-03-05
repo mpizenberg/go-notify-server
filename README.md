@@ -176,18 +176,19 @@ Send a push notification to matching subscriptions:
 }
 ```
 
-- `title` is required. All other fields are optional. The `url` field is nested under `data` to match the Notification API structure (see field descriptions below).
+- `title` is required. All other fields are optional.
 - If `topic` is set, only matching subscriptions are notified. If omitted, all subscriptions are notified.
 - `icon` — main image displayed alongside the notification (typically 192x192px). Can be an absolute path (resolved relative to the service worker's origin, e.g. `/icons/icon-192.png`) or a full URL (e.g. `https://cdn.example.com/icon.png`).
 - `badge` — small monochrome icon shown when space is limited, e.g. the Android status bar (typically 72x72px). Not supported on all platforms. Same path resolution as `icon`.
 - `tag` — string identifier that groups notifications. A new notification with the same tag **replaces** the previous one instead of stacking, useful for updating rather than flooding.
 - `lang` — BCP 47 language tag (e.g. `"en"`, `"fr-FR"`). Hints the language of the notification content to the browser.
 - `silent` — if `true`, the notification is presented silently (no sound/vibration). If omitted (`null`), the device default behavior applies.
-- `data.url` — URL to open when the notification is clicked. Passed through as `notification.data.url` in the push payload; the service worker reads it in its `notificationclick` handler.
+- `data` — arbitrary JSON object passed through as `notification.data` in the push payload. Commonly used to carry a `url` field that the service worker reads in its `notificationclick` handler (e.g. `"data": {"url": "/messages/123"}`), but any key/value pairs are accepted.
 - `legacy` — if `true`, sends the notification fields directly as the push payload (e.g. `{"title": "...", "body": "..."}`) instead of wrapping them in the Declarative Web Push envelope. This forces the service worker to be woken up to handle the push event, which is useful when you need the service worker to run custom logic. Defaults to `false`.
 - The server wraps the payload in the [Declarative Web Push](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers) format (`"web_push": 8030` envelope) by default, so Safari 18.4+ can display notifications natively without waking the service worker. Other browsers ignore this key; their service worker unwraps `payload.notification`. Set `"legacy": true` to disable this wrapping.
 - Delivery fans out concurrently (pool of 10). Stale subscriptions (404/410) are automatically removed.
 - TTL: 24 hours for all messages.
+- **Payload size limit:** The Web Push standard allows up to ~4096 bytes for the encrypted payload. Keep the total notification JSON (title, body, data, etc.) well under this limit — the push service will reject oversized messages.
 
 Response:
 

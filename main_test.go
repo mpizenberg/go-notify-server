@@ -181,7 +181,7 @@ func TestPushPayload(t *testing.T) {
 			Tag:    "msg-1",
 			Lang:   "en",
 			Silent: &silent,
-			Data:   &NotifyRequestData{URL: "/page"},
+			Data:   map[string]any{"url": "/page"},
 		})
 		if err != nil {
 			t.Fatalf("pushPayload: %v", err)

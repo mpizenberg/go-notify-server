@@ -11,23 +11,18 @@ import (
 	webpush "github.com/SherClockHolmes/webpush-go"
 )
 
-// NotifyRequestData holds the data sub-object of a notify request.
-type NotifyRequestData struct {
-	URL string `json:"url,omitempty"`
-}
-
 // NotifyRequest is the JSON body for POST /notify.
 type NotifyRequest struct {
-	Topic  string             `json:"topic"`
-	Title  string             `json:"title"`
-	Body   string             `json:"body"`
-	Icon   string             `json:"icon,omitempty"`
-	Badge  string             `json:"badge,omitempty"`
-	Tag    string             `json:"tag,omitempty"`
-	Lang   string             `json:"lang,omitempty"`
-	Silent *bool              `json:"silent,omitempty"`
-	Data   *NotifyRequestData `json:"data,omitempty"`
-	Legacy bool               `json:"legacy,omitempty"`
+	Topic  string         `json:"topic"`
+	Title  string         `json:"title"`
+	Body   string         `json:"body"`
+	Icon   string         `json:"icon,omitempty"`
+	Badge  string         `json:"badge,omitempty"`
+	Tag    string         `json:"tag,omitempty"`
+	Lang   string         `json:"lang,omitempty"`
+	Silent *bool          `json:"silent,omitempty"`
+	Data   map[string]any `json:"data,omitempty"`
+	Legacy bool           `json:"legacy,omitempty"`
 }
 
 // NotifyResult is the JSON response for POST /notify.
@@ -68,8 +63,8 @@ func pushPayload(req NotifyRequest) ([]byte, error) {
 	if req.Silent != nil {
 		notification["silent"] = *req.Silent
 	}
-	if req.Data != nil && req.Data.URL != "" {
-		notification["data"] = map[string]any{"url": req.Data.URL}
+	if len(req.Data) > 0 {
+		notification["data"] = req.Data
 	}
 	if req.Legacy {
 		return json.Marshal(notification)
