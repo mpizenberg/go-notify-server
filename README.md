@@ -146,7 +146,7 @@ Send a push notification to all subscribers of a topic — **no authentication r
 }
 ```
 
-- `title` is required. All other fields (`body`, `icon`, `badge`, `tag`, `lang`, `silent`, `data.url`) are optional.
+- `title` is required. All other fields (`body`, `icon`, `badge`, `tag`, `lang`, `silent`, `data.url`, `legacy`) are optional.
 - The `topic` in the URL path overrides any `topic` in the body.
 - Refer to the `/notify` endpoint for more information.
 
@@ -184,7 +184,8 @@ Send a push notification to matching subscriptions:
 - `lang` — BCP 47 language tag (e.g. `"en"`, `"fr-FR"`). Hints the language of the notification content to the browser.
 - `silent` — if `true`, the notification is presented silently (no sound/vibration). If omitted (`null`), the device default behavior applies.
 - `data.url` — URL to open when the notification is clicked. Passed through as `notification.data.url` in the push payload; the service worker reads it in its `notificationclick` handler.
-- The server wraps the payload in the [Declarative Web Push](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers) format (`"web_push": 8030` envelope), so Safari 18.4+ can display notifications natively without waking the service worker. Other browsers ignore this key; their service worker unwraps `payload.notification`.
+- `legacy` — if `true`, sends the notification fields directly as the push payload (e.g. `{"title": "...", "body": "..."}`) instead of wrapping them in the Declarative Web Push envelope. This forces the service worker to be woken up to handle the push event, which is useful when you need the service worker to run custom logic. Defaults to `false`.
+- The server wraps the payload in the [Declarative Web Push](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers) format (`"web_push": 8030` envelope) by default, so Safari 18.4+ can display notifications natively without waking the service worker. Other browsers ignore this key; their service worker unwraps `payload.notification`. Set `"legacy": true` to disable this wrapping.
 - Delivery fans out concurrently (pool of 10). Stale subscriptions (404/410) are automatically removed.
 - TTL: 24 hours for all messages.
 

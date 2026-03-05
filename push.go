@@ -18,15 +18,16 @@ type NotifyRequestData struct {
 
 // NotifyRequest is the JSON body for POST /notify.
 type NotifyRequest struct {
-	Topic string             `json:"topic"`
-	Title string             `json:"title"`
-	Body  string             `json:"body"`
-	Icon  string             `json:"icon,omitempty"`
-	Badge string             `json:"badge,omitempty"`
+	Topic  string             `json:"topic"`
+	Title  string             `json:"title"`
+	Body   string             `json:"body"`
+	Icon   string             `json:"icon,omitempty"`
+	Badge  string             `json:"badge,omitempty"`
 	Tag    string             `json:"tag,omitempty"`
 	Lang   string             `json:"lang,omitempty"`
 	Silent *bool              `json:"silent,omitempty"`
 	Data   *NotifyRequestData `json:"data,omitempty"`
+	Legacy bool               `json:"legacy,omitempty"`
 }
 
 // NotifyResult is the JSON response for POST /notify.
@@ -37,10 +38,14 @@ type NotifyResult struct {
 }
 
 // pushPayload builds the JSON payload sent to the browser.
-// It uses the Declarative Web Push format (RFC 8030) so that Safari 18.4+
-// can display the notification natively without waking the service worker.
-// Other browsers ignore the "web_push" key; the service worker unwraps
-// payload.notification to extract the fields.
+//
+// By default it uses the Declarative Web Push format (RFC 8030) so that
+// Safari 18.4+ can display the notification natively without waking the
+// service worker.  Other browsers ignore the "web_push" key; the service
+// worker unwraps payload.notification to extract the fields.
+//
+// When req.Legacy is true, the payload omits the "web_push" key so the
+// service worker is always woken up to handle the push event.
 func pushPayload(req NotifyRequest) ([]byte, error) {
 	notification := map[string]any{
 		"title": req.Title,
@@ -65,6 +70,9 @@ func pushPayload(req NotifyRequest) ([]byte, error) {
 	}
 	if req.Data != nil && req.Data.URL != "" {
 		notification["data"] = map[string]any{"url": req.Data.URL}
+	}
+	if req.Legacy {
+		return json.Marshal(notification)
 	}
 	payload := map[string]any{
 		"web_push":     8030,
