@@ -93,6 +93,7 @@ func (s *Server) HandlePostSubscription(w http.ResponseWriter, r *http.Request) 
 func (s *Server) HandleDeleteSubscriptionByEndpoint(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Endpoint string `json:"endpoint"`
+		Topic    string `json:"topic"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -105,7 +106,7 @@ func (s *Server) HandleDeleteSubscriptionByEndpoint(w http.ResponseWriter, r *ht
 		return
 	}
 
-	if err := DeleteSubscriptionByEndpoint(s.DB, body.Endpoint); err != nil {
+	if err := DeleteSubscriptionByEndpoint(s.DB, body.Endpoint, body.Topic); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to delete subscription")
 		return
 	}

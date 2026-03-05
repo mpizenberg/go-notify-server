@@ -124,10 +124,14 @@ Register or update a push subscription. The body matches `PushSubscription.toJSO
 Unregister a subscription by endpoint:
 
 ```json
-{ "endpoint": "https://fcm.googleapis.com/fcm/send/..." }
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "topic": "general"
+}
 ```
 
-Returns `204 No Content`. Idempotent (returns 204 even if not found).
+- `topic` is optional. If provided, only the subscription for that specific topic is removed. If omitted, all subscriptions for the endpoint are removed.
+- Returns `204 No Content`. Idempotent (returns 204 even if not found).
 
 #### `POST /topics/{topic}/notify`
 
@@ -231,7 +235,7 @@ CREATE TABLE subscriptions (
     key_p256dh TEXT NOT NULL,
     key_auth   TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(endpoint)
+    UNIQUE(endpoint, topic)
 );
 
 CREATE TABLE delivery_log (

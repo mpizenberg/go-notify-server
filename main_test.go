@@ -63,7 +63,7 @@ func TestUpsertSubscription(t *testing.T) {
 		t.Error("expected non-empty id")
 	}
 
-	// Upsert same endpoint should return same ID, created=false.
+	// Upsert same endpoint+topic should return same ID, created=false.
 	id2, created, err := UpsertSubscription(db, "news", "https://push.example.com/sub1", "p256dh-key-updated", "auth-key-updated")
 	if err != nil {
 		t.Fatalf("UpsertSubscription (update): %v", err)
@@ -73,6 +73,74 @@ func TestUpsertSubscription(t *testing.T) {
 	}
 	if id2 != id1 {
 		t.Errorf("expected same id %q, got %q", id1, id2)
+	}
+}
+
+func TestMultiTopicSubscription(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	db, err := OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("OpenDB: %v", err)
+	}
+	defer db.Close()
+
+	endpoint := "https://push.example.com/multi"
+
+	// Subscribe same endpoint to two different topics.
+	id1, created1, err := UpsertSubscription(db, "topicA", endpoint, "key", "auth")
+	if err != nil {
+		t.Fatalf("UpsertSubscription topicA: %v", err)
+	}
+	if !created1 {
+		t.Error("expected created=true for topicA")
+	}
+
+	id2, created2, err := UpsertSubscription(db, "topicB", endpoint, "key", "auth")
+	if err != nil {
+		t.Fatalf("UpsertSubscription topicB: %v", err)
+	}
+	if !created2 {
+		t.Error("expected created=true for topicB")
+	}
+	if id1 == id2 {
+		t.Error("expected different IDs for different topics")
+	}
+
+	// Both topics should have the subscription.
+	subsA, _ := GetSubscriptionsByTopic(db, "topicA")
+	subsB, _ := GetSubscriptionsByTopic(db, "topicB")
+	if len(subsA) != 1 {
+		t.Errorf("expected 1 subscription for topicA, got %d", len(subsA))
+	}
+	if len(subsB) != 1 {
+		t.Errorf("expected 1 subscription for topicB, got %d", len(subsB))
+	}
+
+	// Delete only topicA subscription.
+	if err := DeleteSubscriptionByEndpoint(db, endpoint, "topicA"); err != nil {
+		t.Fatalf("DeleteSubscriptionByEndpoint topicA: %v", err)
+	}
+
+	subsA, _ = GetSubscriptionsByTopic(db, "topicA")
+	subsB, _ = GetSubscriptionsByTopic(db, "topicB")
+	if len(subsA) != 0 {
+		t.Errorf("expected 0 subscriptions for topicA after delete, got %d", len(subsA))
+	}
+	if len(subsB) != 1 {
+		t.Errorf("expected 1 subscription for topicB after topicA delete, got %d", len(subsB))
+	}
+
+	// Delete all subscriptions for endpoint (no topic).
+	// Re-add topicA first.
+	UpsertSubscription(db, "topicA", endpoint, "key", "auth")
+	if err := DeleteSubscriptionByEndpoint(db, endpoint, ""); err != nil {
+		t.Fatalf("DeleteSubscriptionByEndpoint all: %v", err)
+	}
+	all, _ := GetSubscriptionsByTopic(db, "")
+	for _, s := range all {
+		if s.Endpoint == endpoint {
+			t.Error("expected all subscriptions for endpoint to be deleted")
+		}
 	}
 }
 

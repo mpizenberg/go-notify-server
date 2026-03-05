@@ -45,7 +45,7 @@ func migrate(db *sql.DB) error {
 			key_p256dh TEXT NOT NULL,
 			key_auth   TEXT NOT NULL,
 			created_at TEXT NOT NULL DEFAULT (datetime('now')),
-			UNIQUE(endpoint)
+			UNIQUE(endpoint, topic)
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_subscriptions_topic ON subscriptions(topic)`,
 		`CREATE TABLE IF NOT EXISTS delivery_log (
@@ -89,8 +89,7 @@ func UpsertSubscription(db *sql.DB, topic, endpoint, p256dh, auth string) (id st
 	result, err := db.Exec(`
 		INSERT INTO subscriptions (id, topic, endpoint, key_p256dh, key_auth)
 		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT(endpoint) DO UPDATE SET
-			topic = excluded.topic,
+		ON CONFLICT(endpoint, topic) DO UPDATE SET
 			key_p256dh = excluded.key_p256dh,
 			key_auth = excluded.key_auth
 	`, newID, topic, endpoint, p256dh, auth)
@@ -102,7 +101,7 @@ func UpsertSubscription(db *sql.DB, topic, endpoint, p256dh, auth string) (id st
 	// With ON CONFLICT DO UPDATE, RowsAffected is always 1.
 	// Check if our newID was actually inserted by querying back.
 	var actualID string
-	err = db.QueryRow(`SELECT id FROM subscriptions WHERE endpoint = ?`, endpoint).Scan(&actualID)
+	err = db.QueryRow(`SELECT id FROM subscriptions WHERE endpoint = ? AND topic = ?`, endpoint, topic).Scan(&actualID)
 	if err != nil {
 		return "", false, fmt.Errorf("lookup subscription id: %w", err)
 	}
@@ -137,8 +136,13 @@ func GetSubscriptionsByTopic(db *sql.DB, topic string) ([]Subscription, error) {
 	return subs, rows.Err()
 }
 
-// DeleteSubscriptionByEndpoint removes a subscription by its endpoint URL.
-func DeleteSubscriptionByEndpoint(db *sql.DB, endpoint string) error {
+// DeleteSubscriptionByEndpoint removes subscriptions by endpoint URL.
+// If topic is non-empty, only the subscription for that specific topic is removed.
+func DeleteSubscriptionByEndpoint(db *sql.DB, endpoint, topic string) error {
+	if topic != "" {
+		_, err := db.Exec(`DELETE FROM subscriptions WHERE endpoint = ? AND topic = ?`, endpoint, topic)
+		return err
+	}
 	_, err := db.Exec(`DELETE FROM subscriptions WHERE endpoint = ?`, endpoint)
 	return err
 }
