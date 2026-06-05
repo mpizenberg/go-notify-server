@@ -80,11 +80,16 @@ func pushPayload(req NotifyRequest) ([]byte, error) {
 
 // collapseTopic derives an RFC 8030 Topic header value from a notification tag.
 //
-// The Topic header collapses messages at the push service: a newer message with
-// the same Topic replaces an earlier, still-undelivered one. On Apple's gateway
-// this maps to apns-collapse-id, which is what actually makes iOS replace an
-// already-delivered notification (the notification `tag` alone does not — iOS
-// stacks them). It mirrors the in-payload `tag` so the two stay consistent.
+// The Topic header de-dupes messages that are still QUEUED at the push service:
+// a newer message with the same Topic replaces an earlier, still-undelivered one
+// (e.g. several notifications sent while the device is offline collapse to the
+// latest on reconnect). It does NOT merge a notification that has already been
+// delivered and displayed — that is the job of the notification `tag`, applied
+// by the user agent. On Apple's gateway this Topic maps to apns-collapse-id, but
+// note the displayed-notification merge by `tag` is currently broken on Safari /
+// iOS (WebKit bug 258922), so on those platforms same-tag notifications received
+// while online still stack. This header only helps the offline-backlog case. It
+// mirrors the in-payload `tag` so the two stay consistent.
 //
 // Note: this is unrelated to NotifyRequest.Topic, which is this server's routing
 // key (which subscriptions to fan out to). The collapse key is derived only from
