@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"sync"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
+	"golang.org/x/crypto/blake2b"
 )
 
 // NotifyRequest is the JSON body for POST /notify.
@@ -76,6 +78,28 @@ func pushPayload(req NotifyRequest) ([]byte, error) {
 	return json.Marshal(payload)
 }
 
+// collapseTopic derives an RFC 8030 Topic header value from a notification tag.
+//
+// The Topic header collapses messages at the push service: a newer message with
+// the same Topic replaces an earlier, still-undelivered one. On Apple's gateway
+// this maps to apns-collapse-id, which is what actually makes iOS replace an
+// already-delivered notification (the notification `tag` alone does not — iOS
+// stacks them). It mirrors the in-payload `tag` so the two stay consistent.
+//
+// Note: this is unrelated to NotifyRequest.Topic, which is this server's routing
+// key (which subscriptions to fan out to). The collapse key is derived only from
+// the tag. The header is constrained to <=32 base64url-safe characters and is set
+// verbatim by the library (no validation), so we hash to a guaranteed-valid token
+// rather than passing user input through. blake2b size 8 -> 16 hex chars.
+func collapseTopic(tag string) string {
+	if tag == "" {
+		return ""
+	}
+	h, _ := blake2b.New(8, nil)
+	h.Write([]byte(tag))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 const pushConcurrency = 10
 
 // SendNotifications fetches subscriptions by topic and delivers to all of them.
@@ -127,6 +151,7 @@ func sendToSubscriptions(db *sql.DB, subs []Subscription, req NotifyRequest, vap
 				VAPIDPublicKey:  vapidPublicKey,
 				VAPIDPrivateKey: vapidPrivateKey,
 				Subscriber:      vapidContact,
+				Topic:           collapseTopic(req.Tag),
 				TTL:             86400,
 				Urgency:         webpush.UrgencyHigh,
 			})

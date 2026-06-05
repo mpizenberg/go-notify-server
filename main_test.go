@@ -221,6 +221,37 @@ func TestPushPayload(t *testing.T) {
 	})
 }
 
+func TestCollapseTopic(t *testing.T) {
+	// Empty tag -> empty topic (header omitted, behavior unchanged).
+	if got := collapseTopic(""); got != "" {
+		t.Errorf("expected empty topic for empty tag, got %q", got)
+	}
+
+	// Deterministic: same tag -> same topic (so messages collapse).
+	if collapseTopic("order-42") != collapseTopic("order-42") {
+		t.Error("expected collapseTopic to be deterministic")
+	}
+
+	// Distinct tags -> distinct topics.
+	if collapseTopic("a") == collapseTopic("b") {
+		t.Error("expected different topics for different tags")
+	}
+
+	// Arbitrary/invalid input -> valid RFC 8030 token: <=32 chars, base64url alphabet.
+	for _, tag := range []string{"order #123", "héllo/世界", strings.Repeat("x", 200)} {
+		got := collapseTopic(tag)
+		if len(got) == 0 || len(got) > 32 {
+			t.Errorf("tag %q: topic length %d out of range (1..32)", tag, len(got))
+		}
+		for _, c := range got {
+			ok := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_'
+			if !ok {
+				t.Errorf("tag %q: topic %q contains non-base64url char %q", tag, got, c)
+			}
+		}
+	}
+}
+
 func newTestServer(t *testing.T) *Server {
 	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "test.db")
