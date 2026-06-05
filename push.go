@@ -25,6 +25,11 @@ type NotifyRequest struct {
 	Silent *bool          `json:"silent,omitempty"`
 	Data   map[string]any `json:"data,omitempty"`
 	Legacy bool           `json:"legacy,omitempty"`
+	// Mutable, when present, sets the top-level "mutable" flag on the declarative
+	// payload, which makes Safari also fire the service worker push event (so it
+	// can localize/transform the notification or run custom logic). A pointer so
+	// the flag is emitted only when the caller explicitly includes it.
+	Mutable *bool `json:"mutable,omitempty"`
 }
 
 // NotifyResult is the JSON response for POST /notify.
@@ -43,6 +48,11 @@ type NotifyResult struct {
 //
 // When req.Legacy is true, the payload omits the "web_push" key so the
 // service worker is always woken up to handle the push event.
+//
+// In declarative mode the notification gets a "navigate" member (the URL Safari
+// opens on click, required by the spec), derived from data.url and defaulting to
+// "/". The same URL stays in data.url for the service-worker path used by other
+// browsers. If req.Mutable is set, the top-level "mutable" flag is emitted.
 func pushPayload(req NotifyRequest) ([]byte, error) {
 	notification := map[string]any{
 		"title": req.Title,
@@ -71,9 +81,17 @@ func pushPayload(req NotifyRequest) ([]byte, error) {
 	if req.Legacy {
 		return json.Marshal(notification)
 	}
+	navigate := "/"
+	if u, ok := req.Data["url"].(string); ok && u != "" {
+		navigate = u
+	}
+	notification["navigate"] = navigate
 	payload := map[string]any{
 		"web_push":     8030,
 		"notification": notification,
+	}
+	if req.Mutable != nil {
+		payload["mutable"] = *req.Mutable
 	}
 	return json.Marshal(payload)
 }

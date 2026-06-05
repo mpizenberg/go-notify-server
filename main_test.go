@@ -163,6 +163,14 @@ func TestPushPayload(t *testing.T) {
 		if notif["title"] != "Hello" {
 			t.Errorf("expected title=Hello, got %v", notif["title"])
 		}
+		// navigate is required by the declarative spec; defaults to "/".
+		if notif["navigate"] != "/" {
+			t.Errorf("expected navigate=/, got %v", notif["navigate"])
+		}
+		// mutable is omitted unless the request explicitly sets it.
+		if _, exists := got["mutable"]; exists {
+			t.Errorf("expected mutable to be absent, but it was present")
+		}
 		// Optional fields should be absent.
 		for _, key := range []string{"body", "icon", "badge", "tag", "lang", "silent", "data"} {
 			if _, exists := notif[key]; exists {
@@ -217,6 +225,39 @@ func TestPushPayload(t *testing.T) {
 		dataObj := notif["data"].(map[string]any)
 		if dataObj["url"] != "/page" {
 			t.Errorf("data.url: got %v", dataObj["url"])
+		}
+		// navigate mirrors data.url for the declarative click target.
+		if notif["navigate"] != "/page" {
+			t.Errorf("navigate: got %v", notif["navigate"])
+		}
+	})
+
+	t.Run("Mutable", func(t *testing.T) {
+		mutable := true
+		data, err := pushPayload(NotifyRequest{Title: "Hi", Mutable: &mutable})
+		if err != nil {
+			t.Fatalf("pushPayload: %v", err)
+		}
+		var got map[string]any
+		json.Unmarshal(data, &got)
+		if got["mutable"] != true {
+			t.Errorf("expected mutable=true, got %v", got["mutable"])
+		}
+	})
+
+	t.Run("LegacyHasNoNavigate", func(t *testing.T) {
+		data, err := pushPayload(NotifyRequest{Title: "Hi", Data: map[string]any{"url": "/page"}, Legacy: true})
+		if err != nil {
+			t.Fatalf("pushPayload: %v", err)
+		}
+		var got map[string]any
+		json.Unmarshal(data, &got)
+		// Legacy is a flat payload: no envelope, no navigate (the SW uses data.url).
+		if _, exists := got["web_push"]; exists {
+			t.Errorf("expected no web_push key in legacy payload")
+		}
+		if _, exists := got["navigate"]; exists {
+			t.Errorf("expected no navigate in legacy payload")
 		}
 	})
 }
